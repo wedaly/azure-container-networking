@@ -65,7 +65,7 @@ func TestNewEndpointImplHnsv2Timesout(t *testing.T) {
 
 	hnsFake := hnswrapper.NewHnsv2wrapperFake()
 
-	hnsFake.Delay = 5 * time.Second
+	hnsFake.Delay = 16 * time.Second
 
 	hnsv2 = hnswrapper.Hnsv2wrapperwithtimeout{
 		Hnsv2: hnsFake,
@@ -84,18 +84,12 @@ func TestNewEndpointImplHnsv2Timesout(t *testing.T) {
 		},
 		MacAddress: net.HardwareAddr("00:00:5e:00:53:01"),
 	}
-	endpoint, err := nw.newEndpointImplHnsV2(nil, epInfo)
+	_, err := nw.newEndpointImplHnsV2(nil, epInfo)
 
 	if err == nil {
 		t.Fatal("Failed to timeout HNS calls for creating endpoint")
 	}
 
-	err = nw.deleteEndpointImplHnsV2(endpoint)
-
-	if err != nil {
-		fmt.Printf("+%v", err)
-		t.Fatal(err)
-	}
 }
 
 func TestDeleteEndpointImplHnsv2Timeout(t *testing.T) {
