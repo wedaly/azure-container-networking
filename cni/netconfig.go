@@ -80,9 +80,8 @@ type NetworkConfig struct {
 }
 
 type WindowsSettings struct {
-	EnableLoopbackDSR         bool `json:"enableLoopbackDSR,omitempty"`
-	EnableHNSTimeout          bool `json:"enableHNSTimeout,omitempty"`
-	HnsTimeoutDurationSeconds int  `json:"hnsTimeoutDurationSeconds,omitempty"`
+	EnableLoopbackDSR           bool `json:"enableLoopbackDSR,omitempty"`
+	HnsTimeoutDurationInSeconds int  `json:"hnsTimeoutDurationInSeconds,omitempty"`
 }
 
 type K8SPodEnvArgs struct {

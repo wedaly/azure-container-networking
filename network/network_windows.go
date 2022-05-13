@@ -376,8 +376,8 @@ func (nm *networkManager) newNetworkImpl(nwInfo *NetworkInfo, extIf *externalInt
 			return nil, err
 		}
 
-		if cniConfig.WindowsSettings.EnableHNSTimeout == true {
-			enableHnsTimeout(cniConfig.WindowsSettings.HnsTimeoutDurationSeconds)
+		if cniConfig.WindowsSettings.HnsTimeoutDurationInSeconds > 0 {
+			enableHnsTimeout(cniConfig.WindowsSettings.HnsTimeoutDurationInSeconds)
 		}
 		return nm.newNetworkImplHnsV2(nwInfo, extIf)
 	}
@@ -392,8 +392,8 @@ func (nm *networkManager) deleteNetworkImpl(nw *network, cniConfig *cni.NetworkC
 			return err
 		}
 
-		if cniConfig.WindowsSettings.EnableHNSTimeout == true {
-			enableHnsTimeout(cniConfig.WindowsSettings.HnsTimeoutDurationSeconds)
+		if cniConfig.WindowsSettings.HnsTimeoutDurationInSeconds > 0 {
+			enableHnsTimeout(cniConfig.WindowsSettings.HnsTimeoutDurationInSeconds)
 		}
 		return nm.deleteNetworkImplHnsV2(nw)
 	}

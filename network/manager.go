@@ -4,13 +4,9 @@
 package network
 
 import (
-	"io"
 	"net"
-	"os"
 	"sync"
 	"time"
-
-	"github.com/pkg/errors"
 
 	"github.com/Azure/azure-container-networking/cni"
 
@@ -149,18 +145,6 @@ func (nm *networkManager) restore(isRehydrationRequired bool) error {
 		}
 	}
 
-	// Parsing the Stdin the CRI will pass to CNI
-	// this is to leverage it in Delete/Create network during the initial CNI rehydration
-	stdinData, err := io.ReadAll(os.Stdin)
-	if err != nil {
-		return errors.Wrapf(err, "error reading from stdin")
-	}
-
-	cniConfig, err := cni.ParseNetworkConfig(stdinData)
-	if err != nil {
-		return errors.Wrapf(err, "Failed to parse network configuration in CNI restore")
-	}
-
 	if isRehydrationRequired {
 		modTime, err := nm.store.GetModificationTime()
 		if err == nil {
@@ -179,7 +163,7 @@ func (nm *networkManager) restore(isRehydrationRequired bool) error {
 					for _, extIf := range nm.ExternalInterfaces {
 						for _, nw := range extIf.Networks {
 							log.Printf("[net] Deleting the network %s on reboot\n", nw.Id)
-							nm.deleteNetwork(nw.Id, cniConfig)
+							nm.deleteNetwork(nw.Id, &cni.NetworkConfig{})
 						}
 					}
 
@@ -214,7 +198,7 @@ func (nm *networkManager) restore(isRehydrationRequired bool) error {
 
 				extIf.BridgeName = ""
 
-				_, err = nm.newNetworkImpl(&nwInfo, extIf, cniConfig)
+				_, err = nm.newNetworkImpl(&nwInfo, extIf, &cni.NetworkConfig{})
 				if err != nil {
 					log.Printf("[net] Restoring network failed for nwInfo %v extif %v. This should not happen %v", nwInfo, extIf, err)
 					return err
