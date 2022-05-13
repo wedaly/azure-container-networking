@@ -9,6 +9,7 @@ package network
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/Azure/azure-container-networking/network/hnswrapper"
 
@@ -84,3 +85,78 @@ func TestSuccesfulNetworkCreationWhenAlreadyExists(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestNewNetworkImplHnsV2WithTimeout(t *testing.T) {
+	nm := &networkManager{
+		ExternalInterfaces: map[string]*externalInterface{},
+	}
+
+	hnsFake := hnswrapper.NewHnsv2wrapperFake()
+
+	hnsFake.Delay = 15 * time.Second
+
+	hnsv2 = hnswrapper.Hnsv2wrapperwithtimeout{
+		Hnsv2: hnsFake,
+		HnsCallTimeout: 10 * time.Second,
+	}
+
+	nwInfo := &NetworkInfo{
+		Id:           "d3e97a83-ba4c-45d5-ba88-dc56757ece28",
+		MasterIfName: "eth0",
+		Mode:         "bridge",
+	}
+
+	extInterface := &externalInterface{
+		Name:    "eth0",
+		Subnets: []string{"subnet1", "subnet2"},
+	}
+
+	_, err := nm.newNetworkImplHnsV2(nwInfo, extInterface)
+
+	if err == nil {
+		t.Fatal("Failed to timeout HNS calls for creating network")
+	}
+}
+
+func TestDeleteNetworkImplHnsV2WithTimeout(t *testing.T) {
+	nm := &networkManager{
+		ExternalInterfaces: map[string]*externalInterface{},
+	}
+
+
+	nwInfo := &NetworkInfo{
+		Id:           "d3e97a83-ba4c-45d5-ba88-dc56757ece28",
+		MasterIfName: "eth0",
+		Mode:         "bridge",
+	}
+
+	extInterface := &externalInterface{
+		Name:    "eth0",
+		Subnets: []string{"subnet1", "subnet2"},
+	}
+
+	hnsv2 = hnswrapper.NewHnsv2wrapperFake()
+
+	network, err := nm.newNetworkImplHnsV2(nwInfo, extInterface)
+
+	if err != nil {
+		fmt.Printf("+%v", err)
+		t.Fatal(err)
+	}
+
+	hnsFake := hnswrapper.NewHnsv2wrapperFake()
+
+	hnsFake.Delay = 10 * time.Second
+
+	hnsv2 = hnswrapper.Hnsv2wrapperwithtimeout{
+		Hnsv2: hnsFake,
+		HnsCallTimeout: 5 * time.Second,
+	}
+
+	err = nm.deleteNetworkImplHnsV2(network)
+
+	if err == nil {
+		t.Fatal("Failed to timeout HNS calls for deleting network")
+	}
+}
+

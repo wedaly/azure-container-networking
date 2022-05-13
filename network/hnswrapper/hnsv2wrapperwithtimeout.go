@@ -18,10 +18,8 @@ var ErrHNSCallTimeout = errors.New("timed out calling hns")
 
 type Hnsv2wrapperwithtimeout struct {
 	Hnsv2 HnsV2WrapperInterface
-	// hnsCallTimeout indicates the time in seconds to wait for hns calls before timing out
+	// hnsCallTimeout indicates the time to wait for hns calls before timing out
 	HnsCallTimeout time.Duration
-	// EnableHNSTimeout indicates if we should timeout hns calls
-	EnableHNSTimeout bool
 }
 
 type CreateEndpointFuncResult struct {

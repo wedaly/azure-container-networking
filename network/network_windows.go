@@ -65,7 +65,7 @@ var hnsv2 hnswrapper.HnsV2WrapperInterface = hnswrapper.Hnsv2wrapper{}
 func enableHnsTimeout(timeoutValue int) {
 	if _, ok := hnsv2.(hnswrapper.Hnsv2wrapperwithtimeout); !ok {
 		var timeoutDuration = time.Duration(timeoutValue) * time.Second
-		hnsv2 = hnswrapper.Hnsv2wrapperwithtimeout{Hnsv2: hnswrapper.Hnsv2wrapper{}, HnsCallTimeout: timeoutDuration, EnableHNSTimeout: true}
+		hnsv2 = hnswrapper.Hnsv2wrapperwithtimeout{Hnsv2: hnswrapper.Hnsv2wrapper{}, HnsCallTimeout: timeoutDuration}
 	}
 }
 

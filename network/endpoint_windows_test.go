@@ -65,10 +65,11 @@ func TestNewEndpointImplHnsv2Timesout(t *testing.T) {
 
 	hnsFake := hnswrapper.NewHnsv2wrapperFake()
 
-	hnsFake.Delay = 16 * time.Second
+	hnsFake.Delay = 10 * time.Second
 
 	hnsv2 = hnswrapper.Hnsv2wrapperwithtimeout{
 		Hnsv2: hnsFake,
+		HnsCallTimeout: 5 * time.Second,
 	}
 
 	epInfo := &EndpointInfo{
@@ -126,10 +127,11 @@ func TestDeleteEndpointImplHnsv2Timeout(t *testing.T) {
 
 	hnsFake := hnswrapper.NewHnsv2wrapperFake()
 
-	hnsFake.Delay = 5 * time.Second
+	hnsFake.Delay = 10 * time.Second
 
 	hnsv2 = hnswrapper.Hnsv2wrapperwithtimeout{
 		Hnsv2: hnsFake,
+		HnsCallTimeout: 5 * time.Second,
 	}
 
 	err = nw.deleteEndpointImplHnsV2(endpoint)
