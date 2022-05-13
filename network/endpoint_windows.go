@@ -10,18 +10,15 @@ import (
 	"net"
 	"strings"
 
+	"github.com/Azure/azure-container-networking/cni"
+
 	"github.com/Azure/azure-container-networking/log"
 	"github.com/Azure/azure-container-networking/netlink"
-	"github.com/Azure/azure-container-networking/network/hnswrapper"
 	"github.com/Azure/azure-container-networking/network/policy"
 	"github.com/Azure/azure-container-networking/platform"
 	"github.com/Microsoft/hcsshim"
 	"github.com/Microsoft/hcsshim/hcn"
 )
-
-// this hnsv2 variable is package level variable in network
-// we do this to avoid passing around os specific objects in platform agnostic code
-var hnsv2 hnswrapper.HnsV2WrapperInterface = hnswrapper.Hnsv2wrapperwithtimeout{Hnsv2: hnswrapper.Hnsv2wrapper{}}
 
 const (
 	// hcnSchemaVersionMajor indicates major version number for hcn schema
@@ -97,10 +94,15 @@ func ConstructEndpointID(containerID string, netNsPath string, ifName string) (s
 }
 
 // newEndpointImpl creates a new endpoint in the network.
-func (nw *network) newEndpointImpl(cli apipaClient, _ netlink.NetlinkInterface, _ platform.ExecClient, epInfo *EndpointInfo) (*endpoint, error) {
+func (nw *network) newEndpointImpl(cli apipaClient, _ netlink.NetlinkInterface, _ platform.ExecClient, epInfo *EndpointInfo, cniConfig *cni.NetworkConfig) (*endpoint, error) {
+
 	if useHnsV2, err := UseHnsV2(epInfo.NetNsPath); useHnsV2 {
 		if err != nil {
 			return nil, err
+		}
+
+		if cniConfig.WindowsSettings.EnableHNSTimeout == true {
+			enableHnsTimeout(cniConfig.WindowsSettings.HnsTimeoutDurationSeconds)
 		}
 
 		return nw.newEndpointImplHnsV2(cli, epInfo)
@@ -441,12 +443,15 @@ func (nw *network) newEndpointImplHnsV2(cli apipaClient, epInfo *EndpointInfo) (
 }
 
 // deleteEndpointImpl deletes an existing endpoint from the network.
-func (nw *network) deleteEndpointImpl(_ netlink.NetlinkInterface, _ platform.ExecClient, ep *endpoint) error {
+func (nw *network) deleteEndpointImpl(_ netlink.NetlinkInterface, _ platform.ExecClient, ep *endpoint, cniConfig *cni.NetworkConfig) error {
 	if useHnsV2, err := UseHnsV2(ep.NetNs); useHnsV2 {
 		if err != nil {
 			return err
 		}
 
+		if cniConfig.WindowsSettings.EnableHNSTimeout == true {
+			enableHnsTimeout(cniConfig.WindowsSettings.HnsTimeoutDurationSeconds)
+		}
 		return nw.deleteEndpointImplHnsV2(ep)
 	}
 
