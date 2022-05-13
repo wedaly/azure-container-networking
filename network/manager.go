@@ -4,9 +4,15 @@
 package network
 
 import (
+	"io"
 	"net"
+	"os"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
+
+	"github.com/Azure/azure-container-networking/cni"
 
 	cnms "github.com/Azure/azure-container-networking/cnms/cnmspackage"
 	"github.com/Azure/azure-container-networking/common"
@@ -71,14 +77,14 @@ type NetworkManager interface {
 
 	AddExternalInterface(ifName string, subnet string) error
 
-	CreateNetwork(nwInfo *NetworkInfo) error
-	DeleteNetwork(networkID string) error
+	CreateNetwork(nwInfo *NetworkInfo, cniConfig *cni.NetworkConfig) error
+	DeleteNetwork(networkID string, cniConfig *cni.NetworkConfig) error
 	GetNetworkInfo(networkID string) (NetworkInfo, error)
 	// FindNetworkIDFromNetNs returns the network name that contains an endpoint created for this netNS, errNetworkNotFound if no network is found
 	FindNetworkIDFromNetNs(netNs string) (string, error)
 
-	CreateEndpoint(client apipaClient, networkID string, epInfo *EndpointInfo) error
-	DeleteEndpoint(networkID string, endpointID string) error
+	CreateEndpoint(client apipaClient, networkID string, epInfo *EndpointInfo, cniConfig *cni.NetworkConfig) error
+	DeleteEndpoint(networkID string, endpointID string, cniConfig *cni.NetworkConfig) error
 	GetEndpointInfo(networkID string, endpointID string) (*EndpointInfo, error)
 	GetAllEndpoints(networkID string) (map[string]*EndpointInfo, error)
 	GetEndpointInfoBasedOnPODDetails(networkID string, podName string, podNameSpace string, doExactMatchForPodName bool) (*EndpointInfo, error)
@@ -143,6 +149,18 @@ func (nm *networkManager) restore(isRehydrationRequired bool) error {
 		}
 	}
 
+	// Parsing the Stdin the CRI will pass to CNI
+	// this is to leverage it in Delete/Create network during the initial CNI rehydration
+	stdinData, err := io.ReadAll(os.Stdin)
+	if err != nil {
+		return errors.Wrapf(err, "error reading from stdin")
+	}
+
+	cniConfig, err := cni.ParseNetworkConfig(stdinData)
+	if err != nil {
+		return errors.Wrapf(err, "Failed to parse network configuration in CNI restore")
+	}
+
 	if isRehydrationRequired {
 		modTime, err := nm.store.GetModificationTime()
 		if err == nil {
@@ -161,7 +179,7 @@ func (nm *networkManager) restore(isRehydrationRequired bool) error {
 					for _, extIf := range nm.ExternalInterfaces {
 						for _, nw := range extIf.Networks {
 							log.Printf("[net] Deleting the network %s on reboot\n", nw.Id)
-							nm.deleteNetwork(nw.Id)
+							nm.deleteNetwork(nw.Id, cniConfig)
 						}
 					}
 
@@ -196,7 +214,7 @@ func (nm *networkManager) restore(isRehydrationRequired bool) error {
 
 				extIf.BridgeName = ""
 
-				_, err = nm.newNetworkImpl(&nwInfo, extIf)
+				_, err = nm.newNetworkImpl(&nwInfo, extIf, cniConfig)
 				if err != nil {
 					log.Printf("[net] Restoring network failed for nwInfo %v extif %v. This should not happen %v", nwInfo, extIf, err)
 					return err
@@ -260,11 +278,11 @@ func (nm *networkManager) AddExternalInterface(ifName string, subnet string) err
 }
 
 // CreateNetwork creates a new container network.
-func (nm *networkManager) CreateNetwork(nwInfo *NetworkInfo) error {
+func (nm *networkManager) CreateNetwork(nwInfo *NetworkInfo, cniConfig *cni.NetworkConfig) error {
 	nm.Lock()
 	defer nm.Unlock()
 
-	_, err := nm.newNetwork(nwInfo)
+	_, err := nm.newNetwork(nwInfo, cniConfig)
 	if err != nil {
 		return err
 	}
@@ -278,11 +296,11 @@ func (nm *networkManager) CreateNetwork(nwInfo *NetworkInfo) error {
 }
 
 // DeleteNetwork deletes an existing container network.
-func (nm *networkManager) DeleteNetwork(networkId string) error {
+func (nm *networkManager) DeleteNetwork(networkId string, cniConfig *cni.NetworkConfig) error {
 	nm.Lock()
 	defer nm.Unlock()
 
-	err := nm.deleteNetwork(networkId)
+	err := nm.deleteNetwork(networkId, cniConfig)
 	if err != nil {
 		return err
 	}
@@ -324,7 +342,7 @@ func (nm *networkManager) GetNetworkInfo(networkId string) (NetworkInfo, error) 
 }
 
 // CreateEndpoint creates a new container endpoint.
-func (nm *networkManager) CreateEndpoint(cli apipaClient, networkID string, epInfo *EndpointInfo) error {
+func (nm *networkManager) CreateEndpoint(cli apipaClient, networkID string, epInfo *EndpointInfo, cniConfig *cni.NetworkConfig) error {
 	nm.Lock()
 	defer nm.Unlock()
 
@@ -340,7 +358,7 @@ func (nm *networkManager) CreateEndpoint(cli apipaClient, networkID string, epIn
 		}
 	}
 
-	_, err = nw.newEndpoint(cli, nm.netlink, nm.plClient, epInfo)
+	_, err = nw.newEndpoint(cli, nm.netlink, nm.plClient, epInfo, cniConfig)
 	if err != nil {
 		return err
 	}
@@ -354,7 +372,7 @@ func (nm *networkManager) CreateEndpoint(cli apipaClient, networkID string, epIn
 }
 
 // DeleteEndpoint deletes an existing container endpoint.
-func (nm *networkManager) DeleteEndpoint(networkID, endpointID string) error {
+func (nm *networkManager) DeleteEndpoint(networkID, endpointID string, cniConfig *cni.NetworkConfig) error {
 	nm.Lock()
 	defer nm.Unlock()
 
@@ -363,7 +381,7 @@ func (nm *networkManager) DeleteEndpoint(networkID, endpointID string) error {
 		return err
 	}
 
-	err = nw.deleteEndpoint(nm.netlink, nm.plClient, endpointID)
+	err = nw.deleteEndpoint(nm.netlink, nm.plClient, endpointID, cniConfig)
 	if err != nil {
 		return err
 	}

@@ -6,6 +6,7 @@ package network
 import (
 	"errors"
 	"fmt"
+	"github.com/Azure/azure-container-networking/cni"
 	"net"
 	"strconv"
 	"strings"
@@ -57,7 +58,7 @@ func newErrorNetworkManager(errStr string) error {
 type route netlink.Route
 
 // NewNetworkImpl creates a new container network.
-func (nm *networkManager) newNetworkImpl(nwInfo *NetworkInfo, extIf *externalInterface) (*network, error) {
+func (nm *networkManager) newNetworkImpl(nwInfo *NetworkInfo, extIf *externalInterface, cniConfig *cni.NetworkConfig) (*network, error) {
 	// Connect the external interface.
 	var (
 		vlanid int
@@ -132,7 +133,7 @@ func (nm *networkManager) handleCommonOptions(ifName string, nwInfo *NetworkInfo
 }
 
 // DeleteNetworkImpl deletes an existing container network.
-func (nm *networkManager) deleteNetworkImpl(nw *network) error {
+func (nm *networkManager) deleteNetworkImpl(nw *network, cniConfig *cni.NetworkConfig) error {
 	var networkClient NetworkClient
 
 	if nw.VlanId != 0 {

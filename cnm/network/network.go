@@ -4,6 +4,7 @@
 package network
 
 import (
+	"github.com/Azure/azure-container-networking/cni"
 	"net"
 	"net/http"
 	"time"
@@ -173,7 +174,7 @@ func (plugin *netPlugin) createNetwork(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err = plugin.nm.CreateNetwork(&nwInfo)
+	err = plugin.nm.CreateNetwork(&nwInfo, &cni.NetworkConfig{})
 	if err != nil {
 		plugin.SendErrorResponse(w, err)
 		return
@@ -198,7 +199,7 @@ func (plugin *netPlugin) deleteNetwork(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Process request.
-	err = plugin.nm.DeleteNetwork(req.NetworkID)
+	err = plugin.nm.DeleteNetwork(req.NetworkID, &cni.NetworkConfig{})
 	if err != nil {
 		plugin.SendErrorResponse(w, err)
 		return
@@ -246,7 +247,7 @@ func (plugin *netPlugin) createEndpoint(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		log.Errorf("failed to init CNS client", err)
 	}
-	err = plugin.nm.CreateEndpoint(cnscli, req.NetworkID, &epInfo)
+	err = plugin.nm.CreateEndpoint(cnscli, req.NetworkID, &epInfo, &cni.NetworkConfig{})
 	if err != nil {
 		plugin.SendErrorResponse(w, err)
 		return
@@ -272,7 +273,7 @@ func (plugin *netPlugin) deleteEndpoint(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Process request.
-	err = plugin.nm.DeleteEndpoint(req.NetworkID, req.EndpointID)
+	err = plugin.nm.DeleteEndpoint(req.NetworkID, req.EndpointID, &cni.NetworkConfig{})
 	if err != nil {
 		plugin.SendErrorResponse(w, err)
 		return

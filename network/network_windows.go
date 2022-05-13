@@ -11,6 +11,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-container-networking/cni"
+	"github.com/Azure/azure-container-networking/network/hnswrapper"
+
 	"github.com/Azure/azure-container-networking/log"
 	"github.com/Azure/azure-container-networking/network/policy"
 	"github.com/Microsoft/hcsshim"
@@ -53,6 +56,17 @@ func UseHnsV2(netNs string) (bool, error) {
 	}
 
 	return useHnsV2, err
+}
+
+// this hnsv2 variable is package level variable in network
+// we do this to avoid passing around os specific objects in platform agnostic code
+var hnsv2 hnswrapper.HnsV2WrapperInterface = hnswrapper.Hnsv2wrapper{}
+
+func enableHnsTimeout(timeoutValue int) {
+	if _, ok := hnsv2.(hnswrapper.Hnsv2wrapperwithtimeout); !ok {
+		var timeoutDuration = time.Duration(timeoutValue) * time.Second
+		hnsv2 = hnswrapper.Hnsv2wrapperwithtimeout{Hnsv2: hnswrapper.Hnsv2wrapper{}, HnsCallTimeout: timeoutDuration, EnableHNSTimeout: true}
+	}
 }
 
 // newNetworkImplHnsV1 creates a new container network for HNSv1.
@@ -356,12 +370,15 @@ func (nm *networkManager) newNetworkImplHnsV2(nwInfo *NetworkInfo, extIf *extern
 }
 
 // NewNetworkImpl creates a new container network.
-func (nm *networkManager) newNetworkImpl(nwInfo *NetworkInfo, extIf *externalInterface) (*network, error) {
+func (nm *networkManager) newNetworkImpl(nwInfo *NetworkInfo, extIf *externalInterface, cniConfig *cni.NetworkConfig) (*network, error) {
 	if useHnsV2, err := UseHnsV2(nwInfo.NetNs); useHnsV2 {
 		if err != nil {
 			return nil, err
 		}
 
+		if cniConfig.WindowsSettings.EnableHNSTimeout == true {
+			enableHnsTimeout(cniConfig.WindowsSettings.HnsTimeoutDurationSeconds)
+		}
 		return nm.newNetworkImplHnsV2(nwInfo, extIf)
 	}
 
@@ -369,12 +386,15 @@ func (nm *networkManager) newNetworkImpl(nwInfo *NetworkInfo, extIf *externalInt
 }
 
 // DeleteNetworkImpl deletes an existing container network.
-func (nm *networkManager) deleteNetworkImpl(nw *network) error {
+func (nm *networkManager) deleteNetworkImpl(nw *network, cniConfig *cni.NetworkConfig) error {
 	if useHnsV2, err := UseHnsV2(nw.NetNs); useHnsV2 {
 		if err != nil {
 			return err
 		}
 
+		if cniConfig.WindowsSettings.EnableHNSTimeout == true {
+			enableHnsTimeout(cniConfig.WindowsSettings.HnsTimeoutDurationSeconds)
+		}
 		return nm.deleteNetworkImplHnsV2(nw)
 	}
 

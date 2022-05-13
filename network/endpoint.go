@@ -5,6 +5,7 @@ package network
 
 import (
 	"context"
+	"github.com/Azure/azure-container-networking/cni"
 	"net"
 	"strings"
 
@@ -100,7 +101,7 @@ type apipaClient interface {
 }
 
 // NewEndpoint creates a new endpoint in the network.
-func (nw *network) newEndpoint(cli apipaClient, nl netlink.NetlinkInterface, plc platform.ExecClient, epInfo *EndpointInfo) (*endpoint, error) {
+func (nw *network) newEndpoint(cli apipaClient, nl netlink.NetlinkInterface, plc platform.ExecClient, epInfo *EndpointInfo, cniConfig *cni.NetworkConfig) (*endpoint, error) {
 	var ep *endpoint
 	var err error
 
@@ -112,7 +113,7 @@ func (nw *network) newEndpoint(cli apipaClient, nl netlink.NetlinkInterface, plc
 	}()
 
 	// Call the platform implementation.
-	ep, err = nw.newEndpointImpl(cli, nl, plc, epInfo)
+	ep, err = nw.newEndpointImpl(cli, nl, plc, epInfo, cniConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +125,7 @@ func (nw *network) newEndpoint(cli apipaClient, nl netlink.NetlinkInterface, plc
 }
 
 // DeleteEndpoint deletes an existing endpoint from the network.
-func (nw *network) deleteEndpoint(nl netlink.NetlinkInterface, plc platform.ExecClient, endpointID string) error {
+func (nw *network) deleteEndpoint(nl netlink.NetlinkInterface, plc platform.ExecClient, endpointID string, cniConfig *cni.NetworkConfig) error {
 	var err error
 
 	log.Printf("[net] Deleting endpoint %v from network %v.", endpointID, nw.Id)
@@ -142,7 +143,7 @@ func (nw *network) deleteEndpoint(nl netlink.NetlinkInterface, plc platform.Exec
 	}
 
 	// Call the platform implementation.
-	err = nw.deleteEndpointImpl(nl, plc, ep)
+	err = nw.deleteEndpointImpl(nl, plc, ep, cniConfig)
 	if err != nil {
 		return err
 	}

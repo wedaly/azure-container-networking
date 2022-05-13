@@ -7,6 +7,8 @@ import (
 	"net"
 	"strings"
 
+	"github.com/Azure/azure-container-networking/cni"
+
 	"github.com/Azure/azure-container-networking/log"
 	"github.com/Azure/azure-container-networking/network/policy"
 	"github.com/Azure/azure-container-networking/platform"
@@ -152,7 +154,7 @@ func (nm *networkManager) findExternalInterfaceByName(ifName string) *externalIn
 }
 
 // NewNetwork creates a new container network.
-func (nm *networkManager) newNetwork(nwInfo *NetworkInfo) (*network, error) {
+func (nm *networkManager) newNetwork(nwInfo *NetworkInfo, cniConfig *cni.NetworkConfig) (*network, error) {
 	var nw *network
 	var err error
 
@@ -188,7 +190,7 @@ func (nm *networkManager) newNetwork(nwInfo *NetworkInfo) (*network, error) {
 	}
 
 	// Call the OS-specific implementation.
-	nw, err = nm.newNetworkImpl(nwInfo, extIf)
+	nw, err = nm.newNetworkImpl(nwInfo, extIf, cniConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +204,7 @@ func (nm *networkManager) newNetwork(nwInfo *NetworkInfo) (*network, error) {
 }
 
 // DeleteNetwork deletes an existing container network.
-func (nm *networkManager) deleteNetwork(networkId string) error {
+func (nm *networkManager) deleteNetwork(networkId string, cniConfig *cni.NetworkConfig) error {
 	var err error
 
 	log.Printf("[net] Deleting network %v.", networkId)
@@ -219,7 +221,7 @@ func (nm *networkManager) deleteNetwork(networkId string) error {
 	}
 
 	// Call the OS-specific implementation.
-	err = nm.deleteNetworkImpl(nw)
+	err = nm.deleteNetworkImpl(nw, cniConfig)
 	if err != nil {
 		return err
 	}

@@ -519,7 +519,7 @@ func (plugin *NetPlugin) Add(args *cniSkel.CmdArgs) error {
 		// Network does not exist.
 		telemetry.LogAndSendEvent(plugin.tb, fmt.Sprintf("[cni-net] Creating network %v.", networkID))
 		// opts map needs to get passed in here
-		if nwInfo, err = plugin.createNetworkInternal(networkID, policies, ipamAddConfig, ipamAddResult); err != nil {
+		if nwInfo, err = plugin.createNetworkInternal(networkID, policies, ipamAddConfig, ipamAddResult, nwCfg); err != nil {
 			log.Errorf("Create network failed: %w", err)
 			return err
 		}
@@ -580,6 +580,7 @@ func (plugin *NetPlugin) createNetworkInternal(
 	policies []policy.Policy,
 	ipamAddConfig IPAMAddConfig,
 	ipamAddResult IPAMAddResult,
+	cniConfig *cni.NetworkConfig,
 ) (network.NetworkInfo, error) {
 	nwInfo := network.NetworkInfo{}
 	ipamAddResult.hostSubnetPrefix.IP = ipamAddResult.hostSubnetPrefix.IP.Mask(ipamAddResult.hostSubnetPrefix.Mask)
@@ -642,7 +643,7 @@ func (plugin *NetPlugin) createNetworkInternal(
 
 	addNatIPV6SubnetInfo(ipamAddConfig.nwCfg, ipamAddResult.ipv6Result, &nwInfo)
 
-	err = plugin.nm.CreateNetwork(&nwInfo)
+	err = plugin.nm.CreateNetwork(&nwInfo, cniConfig)
 	if err != nil {
 		err = plugin.Errorf("createNetworkInternal: Failed to create network: %v", err)
 	}
@@ -756,7 +757,7 @@ func (plugin *NetPlugin) createEndpointInternal(opt *createEndpointInternalOpt) 
 	// Create the endpoint.
 	telemetry.SendCNIEvent(plugin.tb, fmt.Sprintf("[cni-net] Creating endpoint %+v.", epInfo))
 	log.Printf("[cni-net] Creating endpoint %v.", epInfo.Id)
-	err = plugin.nm.CreateEndpoint(cnsclient, opt.nwInfo.Id, &epInfo)
+	err = plugin.nm.CreateEndpoint(cnsclient, opt.nwInfo.Id, &epInfo, opt.nwCfg)
 	if err != nil {
 		err = plugin.Errorf("Failed to create endpoint: %v", err)
 	}
@@ -978,7 +979,7 @@ func (plugin *NetPlugin) Delete(args *cniSkel.CmdArgs) error {
 	defer sendMetricFunc()
 	telemetry.LogAndSendEvent(plugin.tb, fmt.Sprintf("Deleting endpoint:%v", endpointID))
 	// Delete the endpoint.
-	if err = plugin.nm.DeleteEndpoint(networkID, endpointID); err != nil {
+	if err = plugin.nm.DeleteEndpoint(networkID, endpointID, nwCfg); err != nil {
 		// return a retriable error so the container runtime will retry this DEL later
 		// the implementation of this function returns nil if the endpoint doens't exist, so
 		// we don't have to check that here

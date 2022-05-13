@@ -1,6 +1,7 @@
 package network
 
 import (
+	"github.com/Azure/azure-container-networking/cni"
 	cnms "github.com/Azure/azure-container-networking/cnms/cnmspackage"
 	"github.com/Azure/azure-container-networking/common"
 )
@@ -33,13 +34,13 @@ func (nm *MockNetworkManager) AddExternalInterface(ifName string, subnet string)
 }
 
 // CreateNetwork mock
-func (nm *MockNetworkManager) CreateNetwork(nwInfo *NetworkInfo) error {
+func (nm *MockNetworkManager) CreateNetwork(nwInfo *NetworkInfo, cniConfig *cni.NetworkConfig) error {
 	nm.TestNetworkInfoMap[nwInfo.Id] = nwInfo
 	return nil
 }
 
 // DeleteNetwork mock
-func (nm *MockNetworkManager) DeleteNetwork(networkID string) error {
+func (nm *MockNetworkManager) DeleteNetwork(networkID string, cniConfig *cni.NetworkConfig) error {
 	return nil
 }
 
@@ -52,13 +53,13 @@ func (nm *MockNetworkManager) GetNetworkInfo(networkID string) (NetworkInfo, err
 }
 
 // CreateEndpoint mock
-func (nm *MockNetworkManager) CreateEndpoint(_ apipaClient, networkID string, epInfo *EndpointInfo) error {
+func (nm *MockNetworkManager) CreateEndpoint(_ apipaClient, networkID string, epInfo *EndpointInfo, cniConfig *cni.NetworkConfig) error {
 	nm.TestEndpointInfoMap[epInfo.Id] = epInfo
 	return nil
 }
 
 // DeleteEndpoint mock
-func (nm *MockNetworkManager) DeleteEndpoint(networkID, endpointID string) error {
+func (nm *MockNetworkManager) DeleteEndpoint(networkID, endpointID string, cniConfig *cni.NetworkConfig) error {
 	delete(nm.TestEndpointInfoMap, endpointID)
 	return nil
 }

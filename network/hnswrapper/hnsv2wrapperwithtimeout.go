@@ -1,6 +1,3 @@
-// Copyright 2022 Microsoft. All rights reserved.
-// MIT License
-
 //go:build windows
 // +build windows
 
@@ -8,16 +5,12 @@ package hnswrapper
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
-	"github.com/Microsoft/hcsshim/hcn"
-)
+	"github.com/pkg/errors"
 
-const (
-	// hnsCallTimeout indicates the time in seconds to wait for hns calls before timing out
-	hnsCallTimeout = 15 * time.Second
+	"github.com/Microsoft/hcsshim/hcn"
 )
 
 // ErrHNSCallTimeout - hns call timeout
@@ -25,6 +18,10 @@ var ErrHNSCallTimeout = errors.New("timed out calling hns")
 
 type Hnsv2wrapperwithtimeout struct {
 	Hnsv2 HnsV2WrapperInterface
+	// hnsCallTimeout indicates the time in seconds to wait for hns calls before timing out
+	HnsCallTimeout time.Duration
+	// EnableHNSTimeout indicates if we should timeout hns calls
+	EnableHNSTimeout bool
 }
 
 type CreateEndpointFuncResult struct {
@@ -64,7 +61,7 @@ type GetNetworkByIDFuncResult struct {
 
 func (h Hnsv2wrapperwithtimeout) CreateEndpoint(endpoint *hcn.HostComputeEndpoint) (*hcn.HostComputeEndpoint, error) {
 	r := make(chan CreateEndpointFuncResult)
-	ctx, cancel := context.WithTimeout(context.TODO(), hnsCallTimeout)
+	ctx, cancel := context.WithTimeout(context.TODO(), h.HnsCallTimeout)
 	defer cancel()
 
 	go func() {
@@ -81,13 +78,13 @@ func (h Hnsv2wrapperwithtimeout) CreateEndpoint(endpoint *hcn.HostComputeEndpoin
 	case res := <-r:
 		return res.endpoint, res.Err
 	case <-ctx.Done():
-		return nil, fmt.Errorf("CreateEndpoint %w , timeout value is %s seconds", ErrHNSCallTimeout, hnsCallTimeout.String())
+		return nil, errors.Wrapf(ErrHNSCallTimeout, "CreateEndpoint timeout value is %v ", h.HnsCallTimeout.String())
 	}
 }
 
 func (h Hnsv2wrapperwithtimeout) DeleteEndpoint(endpoint *hcn.HostComputeEndpoint) error {
 	r := make(chan error)
-	ctx, cancel := context.WithTimeout(context.TODO(), hnsCallTimeout)
+	ctx, cancel := context.WithTimeout(context.TODO(), h.HnsCallTimeout)
 	defer cancel()
 
 	go func() {
@@ -99,13 +96,13 @@ func (h Hnsv2wrapperwithtimeout) DeleteEndpoint(endpoint *hcn.HostComputeEndpoin
 	case res := <-r:
 		return res
 	case <-ctx.Done():
-		return fmt.Errorf("CreateNetwork %w , timeout value is %s seconds", ErrHNSCallTimeout, hnsCallTimeout.String())
+		return errors.Wrapf(ErrHNSCallTimeout, "DeleteEndpoint timeout value is %v ", h.HnsCallTimeout.String())
 	}
 }
 
 func (h Hnsv2wrapperwithtimeout) CreateNetwork(network *hcn.HostComputeNetwork) (*hcn.HostComputeNetwork, error) {
 	r := make(chan CreateNetworkFuncResult)
-	ctx, cancel := context.WithTimeout(context.TODO(), hnsCallTimeout)
+	ctx, cancel := context.WithTimeout(context.TODO(), h.HnsCallTimeout)
 	defer cancel()
 
 	go func() {
@@ -122,13 +119,13 @@ func (h Hnsv2wrapperwithtimeout) CreateNetwork(network *hcn.HostComputeNetwork) 
 	case res := <-r:
 		return res.network, res.Err
 	case <-ctx.Done():
-		return nil, fmt.Errorf("CreateNetwork %w , timeout value is %s seconds", ErrHNSCallTimeout, hnsCallTimeout.String())
+		return nil, errors.Wrapf(ErrHNSCallTimeout, "CreateNetwork timeout value is %v ", h.HnsCallTimeout.String())
 	}
 }
 
 func (h Hnsv2wrapperwithtimeout) DeleteNetwork(network *hcn.HostComputeNetwork) error {
 	r := make(chan error)
-	ctx, cancel := context.WithTimeout(context.TODO(), hnsCallTimeout)
+	ctx, cancel := context.WithTimeout(context.TODO(), h.HnsCallTimeout)
 	defer cancel()
 
 	go func() {
@@ -140,13 +137,13 @@ func (h Hnsv2wrapperwithtimeout) DeleteNetwork(network *hcn.HostComputeNetwork) 
 	case res := <-r:
 		return res
 	case <-ctx.Done():
-		return fmt.Errorf("DeleteNetwork %w , timeout value is %s seconds", ErrHNSCallTimeout, hnsCallTimeout.String())
+		return errors.Wrapf(ErrHNSCallTimeout, "DeleteNetwork timeout value is %v ", h.HnsCallTimeout.String())
 	}
 }
 
 func (h Hnsv2wrapperwithtimeout) ModifyNetworkSettings(network *hcn.HostComputeNetwork, request *hcn.ModifyNetworkSettingRequest) error {
 	r := make(chan error)
-	ctx, cancel := context.WithTimeout(context.TODO(), hnsCallTimeout)
+	ctx, cancel := context.WithTimeout(context.TODO(), h.HnsCallTimeout)
 	defer cancel()
 
 	go func() {
@@ -158,13 +155,13 @@ func (h Hnsv2wrapperwithtimeout) ModifyNetworkSettings(network *hcn.HostComputeN
 	case res := <-r:
 		return res
 	case <-ctx.Done():
-		return fmt.Errorf("ModifyNetworkSettings %w , timeout value is %s seconds", ErrHNSCallTimeout, hnsCallTimeout.String())
+		return errors.Wrapf(ErrHNSCallTimeout, "ModifyNetworkSettings timeout value is %v ", h.HnsCallTimeout.String())
 	}
 }
 
 func (h Hnsv2wrapperwithtimeout) AddNetworkPolicy(network *hcn.HostComputeNetwork, networkPolicy hcn.PolicyNetworkRequest) error {
 	r := make(chan error)
-	ctx, cancel := context.WithTimeout(context.TODO(), hnsCallTimeout)
+	ctx, cancel := context.WithTimeout(context.TODO(), h.HnsCallTimeout)
 	defer cancel()
 
 	go func() {
@@ -176,13 +173,13 @@ func (h Hnsv2wrapperwithtimeout) AddNetworkPolicy(network *hcn.HostComputeNetwor
 	case res := <-r:
 		return res
 	case <-ctx.Done():
-		return fmt.Errorf("AddNetworkPolicy %w , timeout value is %s seconds", ErrHNSCallTimeout, hnsCallTimeout.String())
+		return errors.Wrapf(ErrHNSCallTimeout, "AddNetworkPolicy timeout value is %v ", h.HnsCallTimeout.String())
 	}
 }
 
 func (h Hnsv2wrapperwithtimeout) RemoveNetworkPolicy(network *hcn.HostComputeNetwork, networkPolicy hcn.PolicyNetworkRequest) error {
 	r := make(chan error)
-	ctx, cancel := context.WithTimeout(context.TODO(), hnsCallTimeout)
+	ctx, cancel := context.WithTimeout(context.TODO(), h.HnsCallTimeout)
 	defer cancel()
 
 	go func() {
@@ -194,13 +191,13 @@ func (h Hnsv2wrapperwithtimeout) RemoveNetworkPolicy(network *hcn.HostComputeNet
 	case res := <-r:
 		return res
 	case <-ctx.Done():
-		return fmt.Errorf("RemoveNetworkPolicy %w , timeout value is %s seconds", ErrHNSCallTimeout, hnsCallTimeout.String())
+		return errors.Wrapf(ErrHNSCallTimeout, "RemoveNetworkPolicy timeout value is %v ", h.HnsCallTimeout.String())
 	}
 }
 
 func (h Hnsv2wrapperwithtimeout) GetNamespaceByID(netNamespacePath string) (*hcn.HostComputeNamespace, error) {
 	r := make(chan GetNamespaceByIDFuncResult)
-	ctx, cancel := context.WithTimeout(context.TODO(), hnsCallTimeout)
+	ctx, cancel := context.WithTimeout(context.TODO(), h.HnsCallTimeout)
 	defer cancel()
 
 	go func() {
@@ -217,13 +214,13 @@ func (h Hnsv2wrapperwithtimeout) GetNamespaceByID(netNamespacePath string) (*hcn
 	case res := <-r:
 		return res.namespace, res.Err
 	case <-ctx.Done():
-		return nil, fmt.Errorf("GetNamespaceByID %w , timeout value is %s seconds", ErrHNSCallTimeout, hnsCallTimeout.String())
+		return nil, errors.Wrapf(ErrHNSCallTimeout, "GetNamespaceByID timeout value is %v ", h.HnsCallTimeout.String())
 	}
 }
 
 func (h Hnsv2wrapperwithtimeout) AddNamespaceEndpoint(namespaceId string, endpointId string) error {
 	r := make(chan error)
-	ctx, cancel := context.WithTimeout(context.TODO(), hnsCallTimeout)
+	ctx, cancel := context.WithTimeout(context.TODO(), h.HnsCallTimeout)
 	defer cancel()
 
 	go func() {
@@ -235,13 +232,13 @@ func (h Hnsv2wrapperwithtimeout) AddNamespaceEndpoint(namespaceId string, endpoi
 	case res := <-r:
 		return res
 	case <-ctx.Done():
-		return fmt.Errorf("AddNamespaceEndpoint %w , timeout value is %s seconds", ErrHNSCallTimeout, hnsCallTimeout.String())
+		return fmt.Errorf("AddNamespaceEndpoint %w , timeout value is %s seconds", ErrHNSCallTimeout, h.HnsCallTimeout.String())
 	}
 }
 
 func (h Hnsv2wrapperwithtimeout) RemoveNamespaceEndpoint(namespaceId string, endpointId string) error {
 	r := make(chan error)
-	ctx, cancel := context.WithTimeout(context.TODO(), hnsCallTimeout)
+	ctx, cancel := context.WithTimeout(context.TODO(), h.HnsCallTimeout)
 	defer cancel()
 
 	go func() {
@@ -253,13 +250,13 @@ func (h Hnsv2wrapperwithtimeout) RemoveNamespaceEndpoint(namespaceId string, end
 	case res := <-r:
 		return res
 	case <-ctx.Done():
-		return fmt.Errorf("RemoveNamespaceEndpoint %w , timeout value is %s seconds", ErrHNSCallTimeout, hnsCallTimeout.String())
+		return errors.Wrapf(ErrHNSCallTimeout, "RemoveNamespaceEndpoint %w , timeout value is %s seconds", h.HnsCallTimeout.String())
 	}
 }
 
 func (h Hnsv2wrapperwithtimeout) GetNetworkByName(networkName string) (*hcn.HostComputeNetwork, error) {
 	r := make(chan GetNetworkByNameFuncResult)
-	ctx, cancel := context.WithTimeout(context.TODO(), hnsCallTimeout)
+	ctx, cancel := context.WithTimeout(context.TODO(), h.HnsCallTimeout)
 	defer cancel()
 
 	go func() {
@@ -276,13 +273,13 @@ func (h Hnsv2wrapperwithtimeout) GetNetworkByName(networkName string) (*hcn.Host
 	case res := <-r:
 		return res.network, res.Err
 	case <-ctx.Done():
-		return nil, fmt.Errorf("GetNetworkByName %w , timeout value is %s seconds", ErrHNSCallTimeout, hnsCallTimeout.String())
+		return nil, errors.Wrapf(ErrHNSCallTimeout, "GetNetworkByName %w , timeout value is %s seconds", h.HnsCallTimeout.String())
 	}
 }
 
 func (h Hnsv2wrapperwithtimeout) GetNetworkByID(networkId string) (*hcn.HostComputeNetwork, error) {
 	r := make(chan GetNetworkByIDFuncResult)
-	ctx, cancel := context.WithTimeout(context.TODO(), hnsCallTimeout)
+	ctx, cancel := context.WithTimeout(context.TODO(), h.HnsCallTimeout)
 	defer cancel()
 
 	go func() {
@@ -299,13 +296,13 @@ func (h Hnsv2wrapperwithtimeout) GetNetworkByID(networkId string) (*hcn.HostComp
 	case res := <-r:
 		return res.network, res.Err
 	case <-ctx.Done():
-		return nil, fmt.Errorf("GetNetworkByID %w , timeout value is %s seconds", ErrHNSCallTimeout, hnsCallTimeout.String())
+		return nil, errors.Wrapf(ErrHNSCallTimeout, "GetNetworkByID %w , timeout value is %s seconds", h.HnsCallTimeout.String())
 	}
 }
 
 func (h Hnsv2wrapperwithtimeout) GetEndpointByID(endpointId string) (*hcn.HostComputeEndpoint, error) {
 	r := make(chan GetEndpointByIDFuncResult)
-	ctx, cancel := context.WithTimeout(context.TODO(), hnsCallTimeout)
+	ctx, cancel := context.WithTimeout(context.TODO(), h.HnsCallTimeout)
 	defer cancel()
 
 	go func() {
@@ -322,13 +319,13 @@ func (h Hnsv2wrapperwithtimeout) GetEndpointByID(endpointId string) (*hcn.HostCo
 	case res := <-r:
 		return res.endpoint, res.Err
 	case <-ctx.Done():
-		return nil, fmt.Errorf("GetEndpointByID %w , timeout value is %s seconds", ErrHNSCallTimeout, hnsCallTimeout.String())
+		return nil, errors.Wrapf(ErrHNSCallTimeout, "GetEndpointByID %w , timeout value is %s seconds", h.HnsCallTimeout.String())
 	}
 }
 
 func (h Hnsv2wrapperwithtimeout) ListEndpointsOfNetwork(networkId string) ([]hcn.HostComputeEndpoint, error) {
 	r := make(chan ListEndpointsFuncResult)
-	ctx, cancel := context.WithTimeout(context.TODO(), hnsCallTimeout)
+	ctx, cancel := context.WithTimeout(context.TODO(), h.HnsCallTimeout)
 	defer cancel()
 	go func() {
 		endpoints, err := h.Hnsv2.ListEndpointsOfNetwork(networkId)
@@ -344,13 +341,13 @@ func (h Hnsv2wrapperwithtimeout) ListEndpointsOfNetwork(networkId string) ([]hcn
 	case res := <-r:
 		return res.endpoints, res.Err
 	case <-ctx.Done():
-		return nil, fmt.Errorf("ListEndpointsOfNetwork %w , timeout value is %s seconds", ErrHNSCallTimeout, hnsCallTimeout.String())
+		return nil, errors.Wrapf(ErrHNSCallTimeout, "ListEndpointsOfNetwork %w , timeout value is %s seconds", h.HnsCallTimeout.String())
 	}
 }
 
 func (h Hnsv2wrapperwithtimeout) ApplyEndpointPolicy(endpoint *hcn.HostComputeEndpoint, requestType hcn.RequestType, endpointPolicy hcn.PolicyEndpointRequest) error {
 	r := make(chan error)
-	ctx, cancel := context.WithTimeout(context.TODO(), hnsCallTimeout)
+	ctx, cancel := context.WithTimeout(context.TODO(), h.HnsCallTimeout)
 	defer cancel()
 	go func() {
 		r <- h.Hnsv2.ApplyEndpointPolicy(endpoint, requestType, endpointPolicy)
@@ -361,13 +358,13 @@ func (h Hnsv2wrapperwithtimeout) ApplyEndpointPolicy(endpoint *hcn.HostComputeEn
 	case res := <-r:
 		return res
 	case <-ctx.Done():
-		return fmt.Errorf("ApplyEndpointPolicy %w , timeout value is %s seconds", ErrHNSCallTimeout, hnsCallTimeout.String())
+		return errors.Wrapf(ErrHNSCallTimeout, "ApplyEndpointPolicy %w , timeout value is %s seconds", h.HnsCallTimeout.String())
 	}
 }
 
 func (h Hnsv2wrapperwithtimeout) GetEndpointByName(endpointName string) (*hcn.HostComputeEndpoint, error) {
 	r := make(chan GetEndpointByIDFuncResult)
-	ctx, cancel := context.WithTimeout(context.TODO(), hnsCallTimeout)
+	ctx, cancel := context.WithTimeout(context.TODO(), h.HnsCallTimeout)
 	defer cancel()
 	go func() {
 		endpoint, err := h.Hnsv2.GetEndpointByName(endpointName)
@@ -383,6 +380,6 @@ func (h Hnsv2wrapperwithtimeout) GetEndpointByName(endpointName string) (*hcn.Ho
 	case res := <-r:
 		return res.endpoint, res.Err
 	case <-ctx.Done():
-		return nil, fmt.Errorf("GetEndpointByName %w , timeout value is %s seconds", ErrHNSCallTimeout, hnsCallTimeout.String())
+		return nil, errors.Wrapf(ErrHNSCallTimeout, "GetEndpointByName %w , timeout value is %s seconds", h.HnsCallTimeout.String())
 	}
 }
