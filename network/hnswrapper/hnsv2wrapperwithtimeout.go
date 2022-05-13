@@ -112,7 +112,6 @@ func (h Hnsv2wrapperwithtimeout) CreateNetwork(network *hcn.HostComputeNetwork) 
 			network: network,
 			Err:     err,
 		}
-
 	}()
 
 	select {
