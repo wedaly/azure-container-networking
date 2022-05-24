@@ -147,6 +147,7 @@ func (p *plugin) Delete(args *cniSkel.CmdArgs) error {
 
 	ctx := context.TODO() // TODO
 	if err := p.cnsClient.ReleaseIPAddress(ctx, req); err != nil {
+		// TODO: skip error if addr not found...
 		return p.RetriableError(fmt.Errorf("failed to release address: %w", err))
 	}
 
