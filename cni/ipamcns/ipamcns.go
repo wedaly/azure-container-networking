@@ -89,13 +89,19 @@ func (p *plugin) Add(args *cniSkel.CmdArgs) error {
 		return errors.Wrapf(err, "CNS client RequestIPAddress")
 	}
 
+	ipnet, gw, err := interpretCNSResponse(resp)
+	if err != nil {
+		return errors.Wrapf(err, "Could not interpret CNS response")
+	}
+
 	// TODO: worry about locking...
+
 
 	// TODO: need to output something, right?
 	cniResult := &cniTypesCurr.Result{
 		IPs: []*cniTypesCurr.IPConfig{
 			Version: "4",
-			Addres: net.IPNet{
+			Address: net.IPNet{
 				IP:   ip,
 				Mask: ncipnet,
 			},
@@ -117,6 +123,26 @@ func (p *plugin) Add(args *cniSkel.CmdArgs) error {
 
 	res.Print()
 	return nil
+}
+
+func interpretCNSResponse(resp *cns.IPConfigResponse) (net.IPNet, net.IP, error) {
+	podCIDR := fmt.Sprintf(
+		"%s/%s",
+		resp.PodIpInfo.PodIPConfig.IPAddress,
+		resp.PodIpInfo.NetworkContainerPrimaryIPConfig.IPSubnet.PrefixLength,
+	)
+	_, podIPNet, err := net.ParseCIDR(podCIDR)
+	if err != nil {
+		return errors.Wrapf(err, "CNS returned invalid pod CIDR %q", podCIDR)
+	}
+
+	ncGatewayIPAddress := resp.PodIpInfo.NetworkContainerPrimaryIPConfig.GatewayIPAddress
+	gwIP := net.ParseIP(ncGatewayIPAddress)
+	if gwIP == nil {
+		return net.IPNet{}, nil, fmt.Errorf("CNS returned an invalid gateway address: %s", ncGatewayIPAddress)
+	}
+
+	return podIPNet, gwIP, nil
 }
 
 // Get handles CNI Get commands.
