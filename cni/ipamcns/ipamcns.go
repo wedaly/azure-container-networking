@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Azure/azure-container-networking/cni"
+	cninetwork "github.com/Azure/azure-container-networking/cni/network"
 	"github.com/Azure/azure-container-networking/cns"
 	cnsclient "github.com/Azure/azure-container-networking/cns/client"
 	"github.com/Azure/azure-container-networking/common"
@@ -18,6 +19,8 @@ import (
 	"github.com/pkg/errors"
 
 	cniSkel "github.com/containernetworking/cni/pkg/skel"
+	cniTypes "github.com/containernetworking/cni/pkg/types"
+	cniTypesCurr "github.com/containernetworking/cni/pkg/types/current"
 )
 
 const (
@@ -76,7 +79,7 @@ func (p *plugin) Add(args *cniSkel.CmdArgs) error {
 	ctx := context.TODO() // explain this, set timeout?
 
 	// TODO: explain this...
-	endpointId := network.GetEndpointID(args)
+	endpointId := cninetwork.GetEndpointID(args)
 
 	cnsReq := cns.IPConfigRequest{
 		PodInterfaceID:      endpointId,
@@ -100,9 +103,11 @@ func (p *plugin) Add(args *cniSkel.CmdArgs) error {
 	// TODO: need to output something, right?
 	cniResult := &cniTypesCurr.Result{
 		IPs: []*cniTypesCurr.IPConfig{
-			Version: "4",
-			Address: podIPNet,
-			Gateway: gwIP,
+			{
+				Version: "4",
+				Address: *podIPNet,
+				Gateway: gwIP,
+			},
 		},
 		Routes: []*cniTypes.Route{
 			{
@@ -112,17 +117,17 @@ func (p *plugin) Add(args *cniSkel.CmdArgs) error {
 		},
 	}
 
-	res, err := result.GetAsVersion(nwCfg.CNIVersion) // TODO: need the version...
+	versionedCniResult, err := cniResult.GetAsVersion(nwCfg.CNIVersion) // TODO: need the version...
 	if err != nil {
 		log.Printf("TODO")
 		return errors.Wrapf(err, "TODO")
 	}
 
-	res.Print()
+	versionedCniResult.Print()
 	return nil
 }
 
-func interpretIPConfigResponse(resp *cns.IPConfigResponse) (net.IPNet, net.IP, error) {
+func interpretIPConfigResponse(resp *cns.IPConfigResponse) (*net.IPNet, net.IP, error) {
 	podCIDR := fmt.Sprintf(
 		"%s/%s",
 		resp.PodIpInfo.PodIPConfig.IPAddress,
@@ -130,13 +135,13 @@ func interpretIPConfigResponse(resp *cns.IPConfigResponse) (net.IPNet, net.IP, e
 	)
 	_, podIPNet, err := net.ParseCIDR(podCIDR)
 	if err != nil {
-		return errors.Wrapf(err, "CNS returned invalid pod CIDR %q", podCIDR)
+		return nil, nil, errors.Wrapf(err, "CNS returned invalid pod CIDR %q", podCIDR)
 	}
 
 	ncGatewayIPAddress := resp.PodIpInfo.NetworkContainerPrimaryIPConfig.GatewayIPAddress
 	gwIP := net.ParseIP(ncGatewayIPAddress)
 	if gwIP == nil {
-		return net.IPNet{}, nil, fmt.Errorf("CNS returned an invalid gateway address: %s", ncGatewayIPAddress)
+		return nil, nil, fmt.Errorf("CNS returned an invalid gateway address: %s", ncGatewayIPAddress)
 	}
 
 	return podIPNet, gwIP, nil
