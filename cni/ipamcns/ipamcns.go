@@ -4,7 +4,10 @@
 package ipamcns
 
 import (
+	"time"
+
 	"github.com/Azure/azure-container-networking/cni"
+	cnsclient "github.com/Azure/azure-container-networking/cns/client"
 	"github.com/Azure/azure-container-networking/common"
 	"github.com/Azure/azure-container-networking/log"
 	"github.com/pkg/errors"
@@ -12,9 +15,15 @@ import (
 	cniSkel "github.com/containernetworking/cni/pkg/skel"
 )
 
+const (
+	cnsBaseUrl    = "" // fallback to default http://localhost:10090
+	cnsReqTimeout = 15 * time.Second
+)
+
 // TODO
 type plugin struct {
 	*cni.Plugin
+	cnsClient *cnsclient.Client
 }
 
 // TODO
@@ -23,7 +32,18 @@ func NewPlugin(name string, config *common.PluginConfig) (*plugin, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "Create base plugin")
 	}
-	return &plugin{Plugin: basePlugin}, nil
+
+	cnsClient, err := cnsclient.New(cnsBaseUrl, cnsReqTimeout)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Initializing CNS client")
+	}
+
+	p := &plugin{
+		Plugin:    basePlugin,
+		cnsClient: cnsClient,
+	}
+
+	return p, nil
 }
 
 // Starts the plugin.
@@ -49,6 +69,8 @@ func (p *plugin) Stop() {
 // Add handles CNI add commands.
 func (p *plugin) Add(args *cniSkel.CmdArgs) error {
 	// TODO
+	// instantiate cns client, make the req
+	// worry about locking...
 	return nil
 }
 
@@ -60,6 +82,8 @@ func (p *plugin) Get(args *cniSkel.CmdArgs) error {
 // Delete handles CNI delete commands.
 func (p *plugin) Delete(args *cniSkel.CmdArgs) error {
 	// TODO
+	// instantiate cns client, make the req
+	// worry about locking...
 	return nil
 }
 
