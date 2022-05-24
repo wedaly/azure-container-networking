@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/Azure/azure-container-networking/cni"
+	"github.com/Azure/azure-container-networking/cni/ipamcns"
 	"github.com/Azure/azure-container-networking/common"
 	"github.com/Azure/azure-container-networking/log"
 	"github.com/pkg/errors"
@@ -21,7 +22,7 @@ var version string
 // TODO
 func main() {
 	if err := executePlugin(); err != nil {
-		fmt.Printf("Error executing CNS IPAM plugin: %w\n", err)
+		fmt.Printf("Error executing CNS IPAM plugin: %s\n", err)
 		os.Exit(1)
 	}
 }
@@ -34,23 +35,23 @@ func executePlugin() error {
 	log.SetName(name)
 	log.SetLevel(log.LevelInfo)
 	if err := log.SetTargetLogDirectory(log.TargetLogfile, logDirectory); err != nil {
-		return errors.Wrapf("Failed to setup cni logging: %v", err)
+		return errors.Wrapf(err, "Failed to setup cni logging")
 	}
 	defer log.Close()
 
 	ipamPlugin, err := ipamcns.NewPlugin(name, &config)
 	if err != nil {
-		return errors.Wrapf("Failed to create CNS IPAM plugin: %v", err)
+		return errors.Wrapf(err, "Failed to create CNS IPAM plugin")
 	}
 
 	if err := ipamPlugin.Start(&config); err != nil {
-		return errors.Wrapf("Failed to start CNS IPAM plugin: %v", err)
+		return errors.Wrapf(err, "Failed to start CNS IPAM plugin")
 	}
 
 	defer ipamPlugin.Stop()
 
 	if err := ipamPlugin.Execute(cni.PluginApi(ipamPlugin)); err != nil {
-		return errors.Wrapf("Failed to execute CNS IPAM plugin: %v", err)
+		return errors.Wrapf(err, "Failed to execute CNS IPAM plugin")
 	}
 
 	return nil
