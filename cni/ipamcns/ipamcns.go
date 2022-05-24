@@ -6,6 +6,8 @@ package ipamcns
 import (
 	"github.com/Azure/azure-container-networking/cni"
 	"github.com/Azure/azure-container-networking/common"
+	"github.com/Azure/azure-container-networking/log"
+	"github.com/pkg/errors"
 
 	cniSkel "github.com/containernetworking/cni/pkg/skel"
 )
@@ -23,19 +25,17 @@ func NewPlugin(name string, config *common.PluginConfig) (*plugin, error) {
 
 // Starts the plugin.
 func (p *plugin) Start(config *common.PluginConfig) error {
-	// TODO
+	if err := plugin.Initialize(config); err != nil {
+		return errors.Wrapf(err, "Initialize base plugin")
+	}
+	log.Printf("[cni-ipam] Plugin started")
 	return nil
 }
 
 // Stops the plugin.
 func (p *plugin) Stop() {
-	// TODO
-}
-
-// Configure parses and applies the given network configuration.
-func (p *plugin) Configure(stdinData []byte) (*cni.NetworkConfig, error) {
-	// TODO
-	return nil, nil
+	plugin.Uninitialize()
+	log.Printf("[cni-ipam] Plugin stopped")
 }
 
 //
