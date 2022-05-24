@@ -119,7 +119,7 @@ func (p *plugin) Add(args *cniSkel.CmdArgs) error {
 		},
 	}
 
-	versionedCniResult, err := cniResult.GetAsVersion(nwCfg.CNIVersion) // TODO: need the version...
+	versionedCniResult, err := cniResult.GetAsVersion(nwCfg.CNIVersion)
 	if err != nil {
 		log.Printf("TODO")
 		return errors.Wrapf(err, "TODO")
