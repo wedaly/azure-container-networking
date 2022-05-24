@@ -106,6 +106,11 @@ func (p *plugin) Add(args *cniSkel.CmdArgs) error {
 	}
 
 	// TODO: worry about locking...
+	nwCfg, err := cni.ParseNetworkConfig(args.StdinData)
+	if err != nil {
+		// TODO
+		return err
+	}
 
 	// TODO: need to output something, right?
 	cniResult := &cniTypesCurr.Result{
