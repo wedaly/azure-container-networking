@@ -77,30 +77,20 @@ func (p *plugin) Stop() {
 
 // Add handles CNI add commands.
 func (p *plugin) Add(args *cniSkel.CmdArgs) error {
-	ctx := context.TODO() // explain this, set timeout?
-
-	orchestratorContext, err := cnsOrchestratorContext(args)
+	req, err := cnsIPConfigRequest(args)
 	if err != nil {
 		// TODO
 		return err
 	}
 
-	// TODO: explain this...
-	endpointId := cninetwork.GetEndpointID(args)
-
-	cnsReq := cns.IPConfigRequest{
-		PodInterfaceID:      endpointId,
-		InfraContainerID:    args.ContainerID,
-		OrchestratorContext: orchestratorContext,
-	}
-
-	resp, err := p.cnsClient.RequestIPAddress(ctx, cnsReq)
+	ctx := context.TODO() // explain this, set timeout?
+	resp, err := p.cnsClient.RequestIPAddress(ctx, req)
 	if err != nil {
 		log.Printf("Failed to get IP address from CNS with error %s, response: %v", err, resp)
 		return errors.Wrapf(err, "CNS client RequestIPAddress")
 	}
 
-	podIPNet, gwIP, err := interpretIPConfigResponse(resp)
+	podIPNet, gwIP, err := interpretRequestIPResp(resp)
 	if err != nil {
 		return errors.Wrapf(err, "Could not interpret CNS IPConfigResponse")
 	}
@@ -139,10 +129,39 @@ func (p *plugin) Add(args *cniSkel.CmdArgs) error {
 	return nil
 }
 
-func cnsOrchestratorContext(args *cniSkel.CmdArgs) (json.RawMessage, error) {
+// Get handles CNI Get commands.
+func (p *plugin) Get(args *cniSkel.CmdArgs) error {
+	return nil
+}
+
+// Delete handles CNI delete commands.
+func (p *plugin) Delete(args *cniSkel.CmdArgs) error {
+	// TODO
+	// instantiate cns client, make the req
+	// worry about locking...
+	req, err := cnsIPConfigRequest(args)
+	if err != nil {
+		// TODO
+		return err
+	}
+
+	ctx := context.TODO() // TODO
+	if err := p.cnsClient.ReleaseIPAddress(ctx, req); err != nil {
+		return p.RetriableError(fmt.Errorf("failed to release address: %w", err))
+	}
+
+	return nil
+}
+
+// Update handles CNI update command.
+func (p *plugin) Update(args *cniSkel.CmdArgs) error {
+	return nil
+}
+
+func cnsIPConfigRequest(args *cniSkel.CmdArgs) (cns.IPConfigRequest, error) {
 	podCfg, err := cni.ParseCniArgs(args.Args)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Could not parse CNI args")
+		return cns.IPConfigRequest{}, errors.Wrapf(err, "Could not parse CNI args")
 	}
 
 	podInfo := cns.KubernetesPodInfo{
@@ -150,15 +169,21 @@ func cnsOrchestratorContext(args *cniSkel.CmdArgs) (json.RawMessage, error) {
 		PodNamespace: string(podCfg.K8S_POD_NAMESPACE),
 	}
 
-	jsonMsg, err := json.Marshal(podInfo)
+	orchestratorContext, err := json.Marshal(podInfo)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Could not marshal podInfo to JSON")
+		return cns.IPConfigRequest{}, errors.Wrapf(err, "Could not marshal podInfo to JSON")
 	}
 
-	return jsonMsg, nil
+	req := cns.IPConfigRequest{
+		PodInterfaceID:      cninetwork.GetEndpointID(args),
+		InfraContainerID:    args.ContainerID,
+		OrchestratorContext: orchestratorContext,
+	}
+
+	return req, nil
 }
 
-func interpretIPConfigResponse(resp *cns.IPConfigResponse) (*net.IPNet, net.IP, error) {
+func interpretRequestIPResp(resp *cns.IPConfigResponse) (*net.IPNet, net.IP, error) {
 	podCIDR := fmt.Sprintf(
 		"%s/%s",
 		resp.PodIpInfo.PodIPConfig.IPAddress,
@@ -176,22 +201,4 @@ func interpretIPConfigResponse(resp *cns.IPConfigResponse) (*net.IPNet, net.IP, 
 	}
 
 	return podIPNet, gwIP, nil
-}
-
-// Get handles CNI Get commands.
-func (p *plugin) Get(args *cniSkel.CmdArgs) error {
-	return nil
-}
-
-// Delete handles CNI delete commands.
-func (p *plugin) Delete(args *cniSkel.CmdArgs) error {
-	// TODO
-	// instantiate cns client, make the req
-	// worry about locking...
-	return nil
-}
-
-// Update handles CNI update command.
-func (p *plugin) Update(args *cniSkel.CmdArgs) error {
-	return nil
 }
