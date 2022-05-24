@@ -5,6 +5,7 @@ package ipamcns
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"time"
 
@@ -89,28 +90,24 @@ func (p *plugin) Add(args *cniSkel.CmdArgs) error {
 		return errors.Wrapf(err, "CNS client RequestIPAddress")
 	}
 
-	ipnet, gw, err := interpretCNSResponse(resp)
+	podIPNet, gwIP, err := interpretIPConfigResponse(resp)
 	if err != nil {
-		return errors.Wrapf(err, "Could not interpret CNS response")
+		return errors.Wrapf(err, "Could not interpret CNS IPConfigResponse")
 	}
 
 	// TODO: worry about locking...
-
 
 	// TODO: need to output something, right?
 	cniResult := &cniTypesCurr.Result{
 		IPs: []*cniTypesCurr.IPConfig{
 			Version: "4",
-			Address: net.IPNet{
-				IP:   ip,
-				Mask: ncipnet,
-			},
-			Gateway: "", // TODO
+			Address: podIPNet,
+			Gateway: gwIP,
 		},
 		Routes: []*cniTypes.Route{
 			{
-				Dst: "", // TODO
-				GW:  ncwg,
+				Dst: network.Ipv4DefaultRouteDstPrefix,
+				GW:  gwIP,
 			},
 		},
 	}
@@ -125,7 +122,7 @@ func (p *plugin) Add(args *cniSkel.CmdArgs) error {
 	return nil
 }
 
-func interpretCNSResponse(resp *cns.IPConfigResponse) (net.IPNet, net.IP, error) {
+func interpretIPConfigResponse(resp *cns.IPConfigResponse) (net.IPNet, net.IP, error) {
 	podCIDR := fmt.Sprintf(
 		"%s/%s",
 		resp.PodIpInfo.PodIPConfig.IPAddress,
