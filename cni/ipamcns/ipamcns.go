@@ -19,13 +19,16 @@ type plugin struct {
 
 // TODO
 func NewPlugin(name string, config *common.PluginConfig) (*plugin, error) {
-	// TODO
-	return &plugin{}, nil
+	basePlugin, err := cni.NewPlugin(name, config.Version)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Create base plugin")
+	}
+	return &plugin{Plugin: basePlugin}, nil
 }
 
 // Starts the plugin.
 func (p *plugin) Start(config *common.PluginConfig) error {
-	if err := plugin.Initialize(config); err != nil {
+	if err := p.Initialize(config); err != nil {
 		return errors.Wrapf(err, "Initialize base plugin")
 	}
 	log.Printf("[cni-ipam] Plugin started")
@@ -34,7 +37,7 @@ func (p *plugin) Start(config *common.PluginConfig) error {
 
 // Stops the plugin.
 func (p *plugin) Stop() {
-	plugin.Uninitialize()
+	p.Uninitialize()
 	log.Printf("[cni-ipam] Plugin stopped")
 }
 
