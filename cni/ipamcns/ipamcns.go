@@ -4,12 +4,16 @@
 package ipamcns
 
 import (
+	"context"
+	"net"
 	"time"
 
 	"github.com/Azure/azure-container-networking/cni"
+	"github.com/Azure/azure-container-networking/cns"
 	cnsclient "github.com/Azure/azure-container-networking/cns/client"
 	"github.com/Azure/azure-container-networking/common"
 	"github.com/Azure/azure-container-networking/log"
+	"github.com/Azure/azure-container-networking/network"
 	"github.com/pkg/errors"
 
 	cniSkel "github.com/containernetworking/cni/pkg/skel"
@@ -68,9 +72,50 @@ func (p *plugin) Stop() {
 
 // Add handles CNI add commands.
 func (p *plugin) Add(args *cniSkel.CmdArgs) error {
-	// TODO
-	// instantiate cns client, make the req
-	// worry about locking...
+	ctx := context.TODO() // explain this, set timeout?
+
+	// TODO: explain this...
+	endpointId := network.GetEndpointID(args)
+
+	cnsReq := cns.IPConfigRequest{
+		PodInterfaceID:      endpointId,
+		InfraContainerID:    args.ContainerID,
+		OrchestratorContext: "", // TODO
+	}
+
+	resp, err := p.cnsClient.RequestIPAddress(ctx, cnsReq)
+	if err != nil {
+		log.Printf("Failed to get IP address from CNS with error %s, response: %v", err, resp)
+		return errors.Wrapf(err, "CNS client RequestIPAddress")
+	}
+
+	// TODO: worry about locking...
+
+	// TODO: need to output something, right?
+	cniResult := &cniTypesCurr.Result{
+		IPs: []*cniTypesCurr.IPConfig{
+			Version: "4",
+			Addres: net.IPNet{
+				IP:   ip,
+				Mask: ncipnet,
+			},
+			Gateway: "", // TODO
+		},
+		Routes: []*cniTypes.Route{
+			{
+				Dst: "", // TODO
+				GW:  ncwg,
+			},
+		},
+	}
+
+	res, err := result.GetAsVersion(nwCfg.CNIVersion) // TODO: need the version...
+	if err != nil {
+		log.Printf("TODO")
+		return errors.Wrapf(err, "TODO")
+	}
+
+	res.Print()
 	return nil
 }
 
