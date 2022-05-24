@@ -5,6 +5,7 @@ package ipamcns
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"time"
@@ -78,13 +79,19 @@ func (p *plugin) Stop() {
 func (p *plugin) Add(args *cniSkel.CmdArgs) error {
 	ctx := context.TODO() // explain this, set timeout?
 
+	orchestratorContext, err := cnsOrchestratorContext(args)
+	if err != nil {
+		// TODO
+		return err
+	}
+
 	// TODO: explain this...
 	endpointId := cninetwork.GetEndpointID(args)
 
 	cnsReq := cns.IPConfigRequest{
 		PodInterfaceID:      endpointId,
 		InfraContainerID:    args.ContainerID,
-		OrchestratorContext: "", // TODO
+		OrchestratorContext: orchestratorContext,
 	}
 
 	resp, err := p.cnsClient.RequestIPAddress(ctx, cnsReq)
@@ -125,6 +132,25 @@ func (p *plugin) Add(args *cniSkel.CmdArgs) error {
 
 	versionedCniResult.Print()
 	return nil
+}
+
+func cnsOrchestratorContext(args *cniSkel.CmdArgs) (json.RawMessage, error) {
+	podCfg, err := cni.ParseCniArgs(args.Args)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Could not parse CNI args")
+	}
+
+	podInfo := cns.KubernetesPodInfo{
+		PodName:      string(podCfg.K8S_POD_NAME),
+		PodNamespace: string(podCfg.K8S_POD_NAMESPACE),
+	}
+
+	jsonMsg, err := json.Marshal(podInfo)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Could not marshal podInfo to JSON")
+	}
+
+	return jsonMsg, nil
 }
 
 func interpretIPConfigResponse(resp *cns.IPConfigResponse) (*net.IPNet, net.IP, error) {
