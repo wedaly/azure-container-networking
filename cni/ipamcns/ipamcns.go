@@ -141,9 +141,9 @@ func (p *plugin) Delete(args *cniSkel.CmdArgs) error {
 	}
 
 	// cnsClient sets a request timeout.
+	// If the IP address has already been released, CNS will do nothing and return success.
 	ctx := context.TODO()
 	if err := p.cnsClient.ReleaseIPAddress(ctx, req); err != nil {
-		// TODO: skip error if addr not found...
 		return p.RetriableError(fmt.Errorf("failed to release address: %w", err))
 	}
 
