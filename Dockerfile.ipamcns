@@ -1,0 +1,4 @@
+FROM mcr.microsoft.com/oss/go/microsoft/golang:1.18.2
+ADD . /azure-container-networking
+WORKDIR /azure-container-networking
+RUN go build -o /azure-ipam-cns ./cni/ipamcns/plugin/main.go
