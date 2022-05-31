@@ -1,4 +1,7 @@
-FROM mcr.microsoft.com/oss/go/microsoft/golang:1.18.2
+FROM mcr.microsoft.com/oss/go/microsoft/golang:1.18.2 as build
 ADD . /azure-container-networking
 WORKDIR /azure-container-networking
-RUN go build -o /azure-ipam-cns ./cni/ipamcns/plugin/main.go
+RUN go build -o /azure-cns-ipam ./cni/ipamcns/plugin/main.go
+
+FROM mcr.microsoft.com/oss/mirror/docker.io/library/ubuntu:20.04
+COPY --from=build /azure-cns-ipam /azure-cns-ipam
