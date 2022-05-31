@@ -33,7 +33,7 @@ const (
 type plugin struct {
 	*cni.Plugin
 	cnsClient *cnsclient.Client
-
+}
 
 // NewPlugin constructs a new IPAM plugin.
 func NewPlugin(name string, config *common.PluginConfig) (*plugin, error) {
