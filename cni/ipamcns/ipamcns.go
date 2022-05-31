@@ -29,13 +29,13 @@ const (
 	cnsReqTimeout = 15 * time.Second
 )
 
-// TODO
+// plugin is an IPAM plugin that uses CNS to manage IP addresses.
 type plugin struct {
 	*cni.Plugin
 	cnsClient *cnsclient.Client
-}
 
-// TODO
+
+// NewPlugin constructs a new IPAM plugin.
 func NewPlugin(name string, config *common.PluginConfig) (*plugin, error) {
 	basePlugin, err := cni.NewPlugin(name, config.Version)
 	if err != nil {
@@ -55,7 +55,7 @@ func NewPlugin(name string, config *common.PluginConfig) (*plugin, error) {
 	return p, nil
 }
 
-// Starts the plugin.
+// Start initializes the plugin.
 func (p *plugin) Start(config *common.PluginConfig) error {
 	if err := p.Initialize(config); err != nil {
 		return errors.Wrapf(err, "Initialize base plugin")
@@ -64,7 +64,7 @@ func (p *plugin) Start(config *common.PluginConfig) error {
 	return nil
 }
 
-// Stops the plugin.
+// Stop uninitializes the plugin.
 func (p *plugin) Stop() {
 	p.Uninitialize()
 	log.Printf("[cni-ipam] Plugin stopped")
@@ -79,11 +79,11 @@ func (p *plugin) Stop() {
 func (p *plugin) Add(args *cniSkel.CmdArgs) error {
 	req, err := cnsIPConfigRequest(args)
 	if err != nil {
-		// TODO
 		return err
 	}
 
-	ctx := context.TODO() // explain this, set timeout?
+	// cnsClient sets a request timeout.
+	ctx := context.TODO()
 	resp, err := p.cnsClient.RequestIPAddress(ctx, req)
 	if err != nil {
 		log.Printf("Failed to get IP address from CNS with error %s, response: %v", err, resp)
@@ -95,14 +95,12 @@ func (p *plugin) Add(args *cniSkel.CmdArgs) error {
 		return errors.Wrapf(err, "Could not interpret CNS IPConfigResponse")
 	}
 
-	// TODO: worry about locking...
 	nwCfg, err := cni.ParseNetworkConfig(args.StdinData)
 	if err != nil {
-		// TODO
-		return err
+		log.Printf("Could not parse CNI network config: %s\n", err)
+		return errors.Wrapf(err, "Could not parse CNI network config")
 	}
 
-	// TODO: need to output something, right?
 	cniResult := &cniTypesCurr.Result{
 		IPs: []*cniTypesCurr.IPConfig{
 			{
@@ -121,8 +119,8 @@ func (p *plugin) Add(args *cniSkel.CmdArgs) error {
 
 	versionedCniResult, err := cniResult.GetAsVersion(nwCfg.CNIVersion)
 	if err != nil {
-		log.Printf("TODO")
-		return errors.Wrapf(err, "TODO")
+		log.Printf("Could not interpret CNI result as version %s: %s", nwCfg.CNIVersion, err)
+		return errors.Wrapf(err, "Could not interpret CNI result as version %s", nwCfg.CNIVersion)
 	}
 
 	versionedCniResult.Print()
@@ -131,21 +129,19 @@ func (p *plugin) Add(args *cniSkel.CmdArgs) error {
 
 // Get handles CNI Get commands.
 func (p *plugin) Get(args *cniSkel.CmdArgs) error {
+	// Not used for delegated IPAM plugins.
 	return nil
 }
 
 // Delete handles CNI delete commands.
 func (p *plugin) Delete(args *cniSkel.CmdArgs) error {
-	// TODO
-	// instantiate cns client, make the req
-	// worry about locking...
 	req, err := cnsIPConfigRequest(args)
 	if err != nil {
-		// TODO
 		return err
 	}
 
-	ctx := context.TODO() // TODO
+	// cnsClient sets a request timeout.
+	ctx := context.TODO()
 	if err := p.cnsClient.ReleaseIPAddress(ctx, req); err != nil {
 		// TODO: skip error if addr not found...
 		return p.RetriableError(fmt.Errorf("failed to release address: %w", err))
@@ -156,6 +152,7 @@ func (p *plugin) Delete(args *cniSkel.CmdArgs) error {
 
 // Update handles CNI update command.
 func (p *plugin) Update(args *cniSkel.CmdArgs) error {
+	// This isn't part of the CNI spec, so do nothing.
 	return nil
 }
 
