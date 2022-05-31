@@ -19,7 +19,7 @@ const name = "azure-cns-ipam"
 // Version is populated by make during build.
 var version string
 
-// TODO
+// Entrypoint for the IPAM plugin that uses CNS.
 func main() {
 	if err := executePlugin(); err != nil {
 		fmt.Printf("Error executing CNS IPAM plugin: %s\n", err)
