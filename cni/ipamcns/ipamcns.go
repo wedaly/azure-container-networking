@@ -183,7 +183,7 @@ func cnsIPConfigRequest(args *cniSkel.CmdArgs) (cns.IPConfigRequest, error) {
 
 func interpretRequestIPResp(resp *cns.IPConfigResponse) (*net.IPNet, net.IP, error) {
 	podCIDR := fmt.Sprintf(
-		"%s/%s",
+		"%s/%d",
 		resp.PodIpInfo.PodIPConfig.IPAddress,
 		resp.PodIpInfo.NetworkContainerPrimaryIPConfig.IPSubnet.PrefixLength,
 	)
