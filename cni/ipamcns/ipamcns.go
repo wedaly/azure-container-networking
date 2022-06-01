@@ -187,9 +187,14 @@ func interpretRequestIPResp(resp *cns.IPConfigResponse) (*net.IPNet, net.IP, err
 		resp.PodIpInfo.PodIPConfig.IPAddress,
 		resp.PodIpInfo.NetworkContainerPrimaryIPConfig.IPSubnet.PrefixLength,
 	)
-	_, podIPNet, err := net.ParseCIDR(podCIDR)
+	podIP, podIPNet, err := net.ParseCIDR(podCIDR)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "CNS returned invalid pod CIDR %q", podCIDR)
+	}
+
+	resultIPNet := &net.IPNet{
+		IP:   podIP,
+		Mask: podIPNet.Mask,
 	}
 
 	ncGatewayIPAddress := resp.PodIpInfo.NetworkContainerPrimaryIPConfig.GatewayIPAddress
@@ -198,5 +203,5 @@ func interpretRequestIPResp(resp *cns.IPConfigResponse) (*net.IPNet, net.IP, err
 		return nil, nil, fmt.Errorf("CNS returned an invalid gateway address: %s", ncGatewayIPAddress)
 	}
 
-	return podIPNet, gwIP, nil
+	return resultIPNet, gwIP, nil
 }
